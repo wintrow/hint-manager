@@ -1,0 +1,465 @@
+/* Minimalist Password Manager Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #000;
+    --text: #333;
+    --text-light: #666;
+    --border: #ddd;
+    --background: #fff;
+    --surface: #fafafa;
+    --danger: #d32f2f;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--background);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+.screen {
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Authentication Screen */
+#auth-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--background);
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 360px;
+}
+
+.auth-container h1 {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 32px;
+    color: var(--text);
+}
+
+.auth-description {
+    text-align: center;
+    color: var(--text-light);
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.auth-form {
+    width: 100%;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px 0;
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    margin-bottom: 24px;
+    transition: border-color 0.2s;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-bottom-color: var(--primary);
+}
+
+.auth-button {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 400;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    min-height: 48px;
+}
+
+.auth-button:active {
+    opacity: 0.8;
+}
+
+.error-message {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 8px;
+    text-align: center;
+    min-height: 20px;
+}
+
+/* App Screen */
+#app-screen {
+    padding-bottom: 24px;
+}
+
+.app-header {
+    padding: 20px 20px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--text);
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 12px;
+    min-height: 44px;
+    color: var(--text-light);
+    transition: color 0.2s;
+}
+
+.icon-button:active {
+    color: var(--text);
+}
+
+/* Search */
+.search-container {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 15px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+}
+
+.search-input:focus {
+    outline: none;
+    border-bottom-color: var(--primary);
+}
+
+.search-input::placeholder {
+    color: var(--text-light);
+}
+
+/* Actions */
+.action-container {
+    padding: 20px;
+}
+
+.primary-button {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 400;
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    min-height: 48px;
+}
+
+.primary-button:active {
+    opacity: 0.8;
+}
+
+.secondary-button {
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 400;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+    min-height: 48px;
+}
+
+.secondary-button:active {
+    background: var(--surface);
+}
+
+.danger-button {
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 400;
+    background: var(--danger);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    min-height: 48px;
+}
+
+.danger-button:active {
+    opacity: 0.8;
+}
+
+/* Records */
+.records-container {
+    padding: 0 20px;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-light);
+    padding: 60px 20px;
+    font-size: 14px;
+}
+
+.record-card {
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.record-site {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.record-name {
+    font-size: 14px;
+    color: var(--text-light);
+    word-break: break-word;
+}
+
+.record-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 12px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: color 0.2s;
+}
+
+.action-btn:active {
+    color: var(--text);
+}
+
+.password-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 12px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.password-text {
+    flex: 1;
+    word-break: break-all;
+    color: var(--text);
+}
+
+.password-copy {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 12px;
+    min-height: 44px;
+    color: var(--text-light);
+    transition: color 0.2s;
+}
+
+.password-copy:active {
+    color: var(--text);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.modal-content {
+    background: var(--background);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-small {
+    max-width: 360px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--text);
+}
+
+/* Forms */
+.record-form {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 400;
+    color: var(--text);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 0;
+    font-size: 16px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-bottom-color: var(--primary);
+}
+
+.password-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.password-input-group input {
+    flex: 1;
+}
+
+.toggle-button {
+    background: transparent;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 12px 16px;
+    min-width: 80px;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.toggle-button:active {
+    background: var(--surface);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.form-actions button {
+    flex: 1;
+}
+
+.delete-message {
+    padding: 24px;
+    color: var(--text);
+    text-align: center;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .auth-container {
+        max-width: 400px;
+    }
+
+    .app-header {
+        padding: 24px 32px 20px;
+    }
+
+    .search-container,
+    .action-container,
+    .records-container {
+        padding-left: 32px;
+        padding-right: 32px;
+    }
+
+    .records-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+input, textarea {
+    -webkit-appearance: none;
+    appearance: none;
+}

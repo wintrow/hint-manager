@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Secure local password manager">
+    <title>Password Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Master Password Setup/Login Screen -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <h1>Password Manager</h1>
+            <div id="setup-form" class="auth-form">
+                <p class="auth-description">Set up your master password to secure your data.</p>
+                <input type="password" id="setup-password" placeholder="Master Password" class="auth-input" autocomplete="new-password">
+                <input type="password" id="setup-confirm" placeholder="Confirm Password" class="auth-input" autocomplete="new-password">
+                <button id="setup-btn" class="auth-button">Set Master Password</button>
+                <p id="setup-error" class="error-message"></p>
+            </div>
+            <div id="login-form" class="auth-form" style="display: none;">
+                <p class="auth-description">Enter your master password to unlock.</p>
+                <input type="password" id="login-password" placeholder="Master Password" class="auth-input" autocomplete="current-password">
+                <button id="login-btn" class="auth-button">Unlock</button>
+                <p id="login-error" class="error-message"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Screen -->
+    <div id="app-screen" class="screen" style="display: none;">
+        <header class="app-header">
+            <h1>Password Manager</h1>
+            <button id="logout-btn" class="icon-button" aria-label="Logout">Logout</button>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search by site or name..." class="search-input" autocomplete="off" inputmode="text">
+        </div>
+
+        <!-- Add New Record Button -->
+        <div class="action-container">
+                    <button id="add-btn" class="primary-button">Add Hint</button>
+        </div>
+
+        <!-- Records List -->
+        <div id="records-container" class="records-container">
+            <p class="empty-state" id="empty-state">No hints stored yet. Click "Add Hint" to get started.</p>
+        </div>
+
+        <!-- Add/Edit Modal -->
+        <div id="record-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Add Hint</h2>
+                    <button id="close-modal" class="icon-button" aria-label="Close">×</button>
+                </div>
+                <form id="record-form" class="record-form">
+                    <input type="hidden" id="record-id">
+                    <div class="form-group">
+                        <label for="record-site">Site/Service</label>
+                        <input type="text" id="record-site" placeholder="example.com" required autocomplete="off" inputmode="text">
+                    </div>
+                    <div class="form-group">
+                        <label for="record-name">Username/Email</label>
+                        <input type="text" id="record-name" placeholder="user@example.com" required autocomplete="off" inputmode="text">
+                    </div>
+                    <div class="form-group">
+                        <label for="record-password">Hint</label>
+                        <input type="text" id="record-password" placeholder="Enter hint" required autocomplete="off" inputmode="text">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-btn" class="secondary-button">Cancel</button>
+                        <button type="submit" class="primary-button">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-modal" class="modal" style="display: none;">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2>Delete Hint?</h2>
+                </div>
+                <p class="delete-message">Are you sure you want to delete this hint? This action cannot be undone.</p>
+                <div class="form-actions">
+                    <button type="button" id="delete-cancel" class="secondary-button">Cancel</button>
+                    <button type="button" id="delete-confirm" class="danger-button">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
