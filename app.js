@@ -473,6 +473,106 @@ async function decryptPassword(record) {
     return await decrypt(record.password, record.iv, encryptionKey);
 }
 
+/**
+ * Export all records as a backup file
+ * Exports encrypted data (still secure, requires master password to decrypt)
+ */
+async function exportBackup() {
+    if (!encryptionKey) {
+        throw new Error('Not authenticated');
+    }
+
+    const records = await getAllRecords();
+    const masterData = await new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_MASTER], 'readonly');
+        const store = transaction.objectStore(STORE_MASTER);
+        const request = store.get('master');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    const backup = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        master: {
+            salt: masterData.salt,
+            passwordHash: masterData.passwordHash
+        },
+        records: records
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hint-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Import records from a backup file
+ */
+async function importBackup(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const backup = JSON.parse(e.target.result);
+                
+                if (!backup.records || !Array.isArray(backup.records)) {
+                    throw new Error('Invalid backup file format');
+                }
+
+                // Verify master password matches
+                const currentMaster = await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_MASTER], 'readonly');
+                    const store = transaction.objectStore(STORE_MASTER);
+                    const request = store.get('master');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+
+                if (backup.master.passwordHash !== currentMaster.passwordHash) {
+                    throw new Error('Backup file was created with a different master password. Cannot import.');
+                }
+
+                // Clear existing records
+                const clearTransaction = db.transaction([STORE_RECORDS], 'readwrite');
+                const clearStore = clearTransaction.objectStore(STORE_RECORDS);
+                await new Promise((resolve, reject) => {
+                    const request = clearStore.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Import records
+                const importTransaction = db.transaction([STORE_RECORDS], 'readwrite');
+                const importStore = importTransaction.objectStore(STORE_RECORDS);
+                
+                for (const record of backup.records) {
+                    // Remove the id so new ones are generated
+                    const { id, ...recordData } = record;
+                    await new Promise((resolve, reject) => {
+                        const request = importStore.add(recordData);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                }
+
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
 // ============================================================================
 // UI Rendering
 // ============================================================================
@@ -728,6 +828,41 @@ async function init() {
         document.getElementById('delete-cancel').addEventListener('click', () => {
             document.getElementById('delete-modal').style.display = 'none';
             currentEditingId = null;
+        });
+
+        // Export backup
+        document.getElementById('export-btn').addEventListener('click', async () => {
+            try {
+                await exportBackup();
+                alert('Backup exported successfully!');
+            } catch (error) {
+                alert('Error exporting backup: ' + error.message);
+            }
+        });
+
+        // Import backup
+        document.getElementById('import-btn').addEventListener('click', () => {
+            document.getElementById('import-file').click();
+        });
+
+        document.getElementById('import-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!confirm('This will replace all your current hints with the backup. Continue?')) {
+                e.target.value = '';
+                return;
+            }
+
+            try {
+                await importBackup(file);
+                alert('Backup imported successfully!');
+                loadAndDisplayRecords();
+                e.target.value = '';
+            } catch (error) {
+                alert('Error importing backup: ' + error.message);
+                e.target.value = '';
+            }
         });
 
         // Real-time search
