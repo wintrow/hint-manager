@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Secure local password manager">
     <title>Password Manager</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
     <!-- Master Password Setup/Login Screen -->
@@ -16,21 +16,21 @@
                 <p class="auth-description">Set up your master password to secure your data.</p>
                 <input type="password" id="setup-password" placeholder="Master Password" class="auth-input" autocomplete="new-password">
                 <input type="password" id="setup-confirm" placeholder="Confirm Password" class="auth-input" autocomplete="new-password">
-                <button id="setup-btn" class="auth-button">Set Master Password</button>
-                <label class="secondary-button file-label" style="width:100%;margin-top:12px;">
-                    Restore from Backup
-                    <input type="file" id="restore-file-setup" accept=".json,application/json" class="file-input-hidden">
-                </label>
+                <button type="button" id="setup-btn" class="auth-button">Set Master Password</button>
+                <div class="restore-box">
+                    <p class="auth-description">或從備份還原：</p>
+                    <input type="file" id="restore-file-setup" accept=".json,application/json" class="file-input-visible">
+                </div>
                 <p id="setup-error" class="error-message"></p>
             </div>
             <div id="login-form" class="auth-form" style="display: none;">
                 <p class="auth-description">Enter your master password to unlock.</p>
                 <input type="password" id="login-password" placeholder="Master Password" class="auth-input" autocomplete="current-password">
-                <button id="login-btn" class="auth-button">Unlock</button>
-                <label class="secondary-button file-label" style="width:100%;margin-top:12px;">
-                    Restore from Backup
-                    <input type="file" id="restore-file-login" accept=".json,application/json" class="file-input-hidden">
-                </label>
+                <button type="button" id="login-btn" class="auth-button">Unlock</button>
+                <div class="restore-box">
+                    <p class="auth-description">或從備份還原：</p>
+                    <input type="file" id="restore-file-login" accept=".json,application/json" class="file-input-visible">
+                </div>
                 <p id="login-error" class="error-message"></p>
             </div>
         </div>
@@ -78,11 +78,11 @@
 
         <!-- Backup/Restore Buttons -->
         <div class="action-container">
-            <button id="export-btn" class="secondary-button">Export Backup</button>
-            <label class="secondary-button file-label" style="margin-top: 12px; width: 100%;">
-                Import Backup
-                <input type="file" id="import-file" accept=".json,application/json" class="file-input-hidden">
-            </label>
+            <button type="button" id="export-btn" class="secondary-button">Export Backup</button>
+            <div class="restore-box" style="margin-top: 16px;">
+                <p class="auth-description">Import Backup</p>
+                <input type="file" id="import-file" accept=".json,application/json" class="file-input-visible">
+            </div>
         </div>
 
         <!-- Records List -->
@@ -134,6 +134,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>

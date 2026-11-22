@@ -814,64 +814,68 @@ async function handleDelete() {
 // Initialization
 // ============================================================================
 
+function on(id, event, handler) {
+    const el = document.getElementById(id);
+    if (!el) {
+        console.warn('Missing element:', id);
+        return;
+    }
+    el.addEventListener(event, handler);
+}
+
 async function init() {
     try {
-        // Initialize database
         await initDB();
 
-        // Check if master password is set
         const isSet = await isMasterPasswordSet();
-        
-        if (isSet) {
-            // Show login form
-            document.getElementById('setup-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        } else {
-            // Show setup form
-            document.getElementById('setup-form').style.display = 'block';
-            document.getElementById('login-form').style.display = 'none';
+        const setupForm = document.getElementById('setup-form');
+        const loginForm = document.getElementById('login-form');
+        if (setupForm && loginForm) {
+            if (isSet) {
+                setupForm.style.display = 'none';
+                loginForm.style.display = 'block';
+            } else {
+                setupForm.style.display = 'block';
+                loginForm.style.display = 'none';
+            }
         }
 
-        // Setup event listeners
-        document.getElementById('setup-btn').addEventListener('click', handleSetup);
-        document.getElementById('login-btn').addEventListener('click', handleLogin);
-        document.getElementById('logout-btn').addEventListener('click', logout);
-        document.getElementById('add-btn').addEventListener('click', () => {
+        on('setup-btn', 'click', handleSetup);
+        on('login-btn', 'click', handleLogin);
+        on('logout-btn', 'click', logout);
+        on('add-btn', 'click', () => {
             currentEditingId = null;
             document.getElementById('record-id').value = '';
             document.getElementById('record-form').reset();
             document.getElementById('modal-title').textContent = 'Add Hint';
             document.getElementById('record-modal').style.display = 'flex';
         });
-        document.getElementById('close-modal').addEventListener('click', () => {
+        on('close-modal', 'click', () => {
             document.getElementById('record-modal').style.display = 'none';
             document.getElementById('record-form').reset();
         });
-        document.getElementById('cancel-btn').addEventListener('click', () => {
+        on('cancel-btn', 'click', () => {
             document.getElementById('record-modal').style.display = 'none';
             document.getElementById('record-form').reset();
         });
-        document.getElementById('record-form').addEventListener('submit', handleRecordSubmit);
-        document.getElementById('delete-confirm').addEventListener('click', handleDelete);
-        document.getElementById('delete-cancel').addEventListener('click', () => {
+        on('record-form', 'submit', handleRecordSubmit);
+        on('delete-confirm', 'click', handleDelete);
+        on('delete-cancel', 'click', () => {
             document.getElementById('delete-modal').style.display = 'none';
             currentEditingId = null;
         });
 
-        // Export backup
-        document.getElementById('export-btn').addEventListener('click', async () => {
+        on('export-btn', 'click', async () => {
             try {
                 await exportBackup();
-                alert('Backup exported successfully!');
+                alert('備份匯出成功！');
             } catch (error) {
-                alert('Error exporting backup: ' + error.message);
+                alert('匯出失敗：' + error.message);
             }
         });
 
-        // Shared: after user picks a backup file, open password modal
         async function handleBackupFileSelected(fileInput) {
-            const file = fileInput.files[0];
-            fileInput.value = '';
+            const file = fileInput.files && fileInput.files[0];
             if (!file) return;
 
             try {
@@ -879,31 +883,26 @@ async function init() {
                 document.getElementById('restore-password').value = '';
                 document.getElementById('restore-error').textContent = '';
                 document.getElementById('restore-modal').style.display = 'flex';
-                document.getElementById('restore-password').focus();
             } catch (error) {
                 alert('讀取備份失敗：' + error.message);
                 pendingBackup = null;
+            } finally {
+                fileInput.value = '';
             }
         }
 
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            handleBackupFileSelected(e.target);
-        });
-        document.getElementById('restore-file-setup').addEventListener('change', (e) => {
-            handleBackupFileSelected(e.target);
-        });
-        document.getElementById('restore-file-login').addEventListener('change', (e) => {
-            handleBackupFileSelected(e.target);
-        });
+        on('import-file', 'change', (e) => handleBackupFileSelected(e.target));
+        on('restore-file-setup', 'change', (e) => handleBackupFileSelected(e.target));
+        on('restore-file-login', 'change', (e) => handleBackupFileSelected(e.target));
 
-        document.getElementById('restore-cancel').addEventListener('click', () => {
+        on('restore-cancel', 'click', () => {
             pendingBackup = null;
             document.getElementById('restore-modal').style.display = 'none';
             document.getElementById('restore-password').value = '';
             document.getElementById('restore-error').textContent = '';
         });
 
-        document.getElementById('restore-confirm').addEventListener('click', async () => {
+        on('restore-confirm', 'click', async () => {
             const password = document.getElementById('restore-password').value;
             const errorEl = document.getElementById('restore-error');
             errorEl.textContent = '';
@@ -925,31 +924,29 @@ async function init() {
             }
         });
 
-        document.getElementById('restore-password').addEventListener('keypress', (e) => {
+        on('restore-password', 'keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('restore-confirm').click();
             }
         });
 
-        // Real-time search
-        document.getElementById('search-input').addEventListener('input', (e) => {
+        on('search-input', 'input', (e) => {
             loadAndDisplayRecords(e.target.value);
         });
 
-        // Allow Enter key to submit auth forms
-        document.getElementById('setup-password').addEventListener('keypress', (e) => {
+        on('setup-password', 'keypress', (e) => {
             if (e.key === 'Enter') handleSetup();
         });
-        document.getElementById('setup-confirm').addEventListener('keypress', (e) => {
+        on('setup-confirm', 'keypress', (e) => {
             if (e.key === 'Enter') handleSetup();
         });
-        document.getElementById('login-password').addEventListener('keypress', (e) => {
+        on('login-password', 'keypress', (e) => {
             if (e.key === 'Enter') handleLogin();
         });
 
     } catch (error) {
         console.error('Initialization error:', error);
-        alert('Failed to initialize application: ' + error.message);
+        alert('初始化失敗：' + error.message);
     }
 }
 
