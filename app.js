@@ -514,61 +514,90 @@ async function exportBackup() {
 }
 
 /**
- * Import records from a backup file
+ * Import records from a backup file.
+ *
+ * Important: After browser data wipe, re-setting a master password creates a NEW salt,
+ * even if the typed password text is the same. So we do NOT compare against the current
+ * master hash. Instead we ask for the password used when the backup was made, verify
+ * against the backup's salt/hash, then restore master + records from the backup.
+ *
+ * @param {File} file - Backup JSON file
+ * @param {string} [password] - Master password for the backup (prompted if omitted)
  */
-async function importBackup(file) {
+async function importBackup(file, password) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const backup = JSON.parse(e.target.result);
-                
+
+                if (!backup.master || !backup.master.salt || !backup.master.passwordHash) {
+                    throw new Error('備份檔格式無效（缺少主密碼資訊）');
+                }
                 if (!backup.records || !Array.isArray(backup.records)) {
-                    throw new Error('Invalid backup file format');
+                    throw new Error('備份檔格式無效（缺少資料）');
                 }
 
-                // Verify master password matches
-                const currentMaster = await new Promise((resolve, reject) => {
-                    const transaction = db.transaction([STORE_MASTER], 'readonly');
-                    const store = transaction.objectStore(STORE_MASTER);
-                    const request = store.get('master');
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                // Ask for the password that was used when this backup was created
+                const masterPassword = password || prompt(
+                    '請輸入「製作此備份時」使用的主密碼：\n' +
+                    '（若資料消失後你重新設定過主密碼，請輸入舊的那個，不是新的）'
+                );
 
-                if (backup.master.passwordHash !== currentMaster.passwordHash) {
-                    throw new Error('Backup file was created with a different master password. Cannot import.');
+                if (!masterPassword) {
+                    throw new Error('已取消匯入');
                 }
 
-                // Clear existing records
-                const clearTransaction = db.transaction([STORE_RECORDS], 'readwrite');
-                const clearStore = clearTransaction.objectStore(STORE_RECORDS);
+                const salt = base64ToArrayBuffer(backup.master.salt);
+                const passwordHash = await derivePasswordHash(masterPassword, salt);
+
+                if (passwordHash !== backup.master.passwordHash) {
+                    throw new Error('主密碼不正確，無法匯入此備份');
+                }
+
+                // Restore master credentials from backup (overwrite current setup)
                 await new Promise((resolve, reject) => {
-                    const request = clearStore.clear();
+                    const transaction = db.transaction([STORE_MASTER], 'readwrite');
+                    const store = transaction.objectStore(STORE_MASTER);
+                    const request = store.put({
+                        id: 'master',
+                        salt: backup.master.salt,
+                        passwordHash: backup.master.passwordHash
+                    });
                     request.onsuccess = () => resolve();
                     request.onerror = () => reject(request.error);
                 });
 
-                // Import records
-                const importTransaction = db.transaction([STORE_RECORDS], 'readwrite');
-                const importStore = importTransaction.objectStore(STORE_RECORDS);
-                
+                // Clear existing records
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_RECORDS], 'readwrite');
+                    const store = transaction.objectStore(STORE_RECORDS);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Import records (keep encrypted ciphertext; same salt/key can decrypt them)
                 for (const record of backup.records) {
-                    // Remove the id so new ones are generated
                     const { id, ...recordData } = record;
                     await new Promise((resolve, reject) => {
-                        const request = importStore.add(recordData);
+                        const transaction = db.transaction([STORE_RECORDS], 'readwrite');
+                        const store = transaction.objectStore(STORE_RECORDS);
+                        const request = store.add(recordData);
                         request.onsuccess = () => resolve();
                         request.onerror = () => reject(request.error);
                     });
                 }
+
+                // Unlock with the restored key material
+                encryptionKey = await deriveKey(masterPassword, salt);
 
                 resolve();
             } catch (error) {
                 reject(error);
             }
         };
-        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.onerror = () => reject(new Error('無法讀取備份檔'));
         reader.readAsText(file);
     });
 }
@@ -840,7 +869,7 @@ async function init() {
             }
         });
 
-        // Import backup
+        // Import backup (from unlocked app)
         document.getElementById('import-btn').addEventListener('click', () => {
             document.getElementById('import-file').click();
         });
@@ -849,18 +878,38 @@ async function init() {
             const file = e.target.files[0];
             if (!file) return;
 
-            if (!confirm('This will replace all your current hints with the backup. Continue?')) {
+            if (!confirm('這會用備份覆蓋目前所有資料，確定繼續？')) {
                 e.target.value = '';
                 return;
             }
 
             try {
                 await importBackup(file);
-                alert('Backup imported successfully!');
-                loadAndDisplayRecords();
+                alert('備份匯入成功！');
+                showAppScreen();
                 e.target.value = '';
             } catch (error) {
-                alert('Error importing backup: ' + error.message);
+                alert('匯入失敗：' + error.message);
+                e.target.value = '';
+            }
+        });
+
+        // Restore from backup on auth screen (for recovery after data wipe)
+        const triggerRestore = () => document.getElementById('restore-file').click();
+        document.getElementById('restore-setup-btn').addEventListener('click', triggerRestore);
+        document.getElementById('restore-login-btn').addEventListener('click', triggerRestore);
+
+        document.getElementById('restore-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                await importBackup(file);
+                alert('備份還原成功！');
+                showAppScreen();
+                e.target.value = '';
+            } catch (error) {
+                alert('還原失敗：' + error.message);
                 e.target.value = '';
             }
         });

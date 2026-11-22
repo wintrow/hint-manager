@@ -17,14 +17,17 @@
                 <input type="password" id="setup-password" placeholder="Master Password" class="auth-input" autocomplete="new-password">
                 <input type="password" id="setup-confirm" placeholder="Confirm Password" class="auth-input" autocomplete="new-password">
                 <button id="setup-btn" class="auth-button">Set Master Password</button>
+                <button type="button" id="restore-setup-btn" class="secondary-button" style="width:100%;margin-top:12px;">Restore from Backup</button>
                 <p id="setup-error" class="error-message"></p>
             </div>
             <div id="login-form" class="auth-form" style="display: none;">
                 <p class="auth-description">Enter your master password to unlock.</p>
                 <input type="password" id="login-password" placeholder="Master Password" class="auth-input" autocomplete="current-password">
                 <button id="login-btn" class="auth-button">Unlock</button>
+                <button type="button" id="restore-login-btn" class="secondary-button" style="width:100%;margin-top:12px;">Restore from Backup</button>
                 <p id="login-error" class="error-message"></p>
             </div>
+            <input type="file" id="restore-file" accept=".json" style="display: none;">
         </div>
     </div>
 
