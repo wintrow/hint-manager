@@ -18,6 +18,11 @@ const DB_VERSION = 1;
 const STORE_MASTER = 'master';
 const STORE_RECORDS = 'records';
 
+// Emergency auto-backup in localStorage (survives some IndexedDB wipes; still encrypted)
+const EMERGENCY_BACKUP_KEY = 'hintManagerEmergencyBackup';
+const AUTO_DOWNLOAD_PREF_KEY = 'hintManagerAutoDownload';
+const LAST_BACKUP_AT_KEY = 'hintManagerLastBackupAt';
+
 // PBKDF2 parameters for key derivation
 // Using 100,000 iterations as recommended by OWASP for 2023+
 // This provides good security while maintaining reasonable performance
@@ -349,10 +354,20 @@ async function unlockMasterPassword(password) {
 
 /**
  * Clear encryption key from memory (logout)
+ * Also download a fresh backup first when possible.
  */
-function logout() {
+async function logout() {
+    try {
+        if (encryptionKey) {
+            await autoBackup({ download: true });
+        }
+    } catch (error) {
+        // Still allow logout even if backup fails
+        console.warn('Logout backup failed:', error);
+    }
     encryptionKey = null;
     showAuthScreen();
+    updateEmergencyRestoreUI();
 }
 
 // ============================================================================
@@ -474,14 +489,9 @@ async function decryptPassword(record) {
 }
 
 /**
- * Export all records as a backup file
- * Exports encrypted data (still secure, requires master password to decrypt)
+ * Build encrypted backup object from current IndexedDB state.
  */
-async function exportBackup() {
-    if (!encryptionKey) {
-        throw new Error('Not authenticated');
-    }
-
+async function buildBackupObject() {
     const records = await getAllRecords();
     const masterData = await new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_MASTER], 'readonly');
@@ -491,7 +501,11 @@ async function exportBackup() {
         request.onerror = () => reject(request.error);
     });
 
-    const backup = {
+    if (!masterData) {
+        throw new Error('尚未設定主密碼，無法備份');
+    }
+
+    return {
         version: '1.0',
         exportDate: new Date().toISOString(),
         master: {
@@ -500,17 +514,108 @@ async function exportBackup() {
         },
         records: records
     };
+}
 
+function isAutoDownloadEnabled() {
+    const saved = localStorage.getItem(AUTO_DOWNLOAD_PREF_KEY);
+    return saved === null ? true : saved === 'true';
+}
+
+function setAutoDownloadEnabled(enabled) {
+    localStorage.setItem(AUTO_DOWNLOAD_PREF_KEY, enabled ? 'true' : 'false');
+}
+
+function saveEmergencyBackup(backup) {
+    localStorage.setItem(EMERGENCY_BACKUP_KEY, JSON.stringify(backup));
+    localStorage.setItem(LAST_BACKUP_AT_KEY, backup.exportDate);
+    updateBackupStatusUI();
+}
+
+function getEmergencyBackup() {
+    try {
+        const raw = localStorage.getItem(EMERGENCY_BACKUP_KEY);
+        if (!raw) return null;
+        const backup = JSON.parse(raw);
+        if (!backup.master || !Array.isArray(backup.records)) return null;
+        return backup;
+    } catch (error) {
+        return null;
+    }
+}
+
+function downloadBackupObject(backup, filename) {
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `hint-manager-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = filename || 'hint-manager-latest-backup.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function updateBackupStatusUI() {
+    const el = document.getElementById('backup-status');
+    if (!el) return;
+    const at = localStorage.getItem(LAST_BACKUP_AT_KEY);
+    if (!at) {
+        el.textContent = '自動備份：尚未建立';
+        return;
+    }
+    const date = new Date(at);
+    el.textContent = '自動備份時間：' + date.toLocaleString();
+}
+
+function updateEmergencyRestoreUI() {
+    const hasBackup = !!getEmergencyBackup();
+    const setupBox = document.getElementById('emergency-restore-setup');
+    const loginBox = document.getElementById('emergency-restore-login');
+    if (setupBox) setupBox.style.display = hasBackup ? 'block' : 'none';
+    if (loginBox) loginBox.style.display = hasBackup ? 'block' : 'none';
+}
+
+/**
+ * Auto-backup after data changes:
+ * 1) Always write encrypted snapshot to localStorage (silent emergency copy)
+ * 2) Optionally download a file (default on) so phone Downloads keeps a copy
+ */
+async function autoBackup({ download = false } = {}) {
+    const backup = await buildBackupObject();
+    saveEmergencyBackup(backup);
+    if (download) {
+        downloadBackupObject(backup, 'hint-manager-latest-backup.json');
+    }
+    return backup;
+}
+
+/**
+ * Manual export: refresh emergency backup + download dated file
+ */
+async function exportBackup() {
+    if (!encryptionKey) {
+        throw new Error('Not authenticated');
+    }
+    const backup = await buildBackupObject();
+    saveEmergencyBackup(backup);
+    downloadBackupObject(
+        backup,
+        `hint-manager-backup-${new Date().toISOString().split('T')[0]}.json`
+    );
+}
+
+/**
+ * Ask browser to keep site data (reduces chance IndexedDB is auto-evicted)
+ */
+async function requestPersistentStorage() {
+    try {
+        if (navigator.storage && navigator.storage.persist) {
+            await navigator.storage.persist();
+        }
+    } catch (error) {
+        // Ignore — not supported on all browsers
+    }
 }
 
 /**
@@ -618,6 +723,7 @@ function showAuthScreen() {
 function showAppScreen() {
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
+    updateBackupStatusUI();
     loadAndDisplayRecords();
 }
 
@@ -748,6 +854,8 @@ async function handleSetup() {
 
     try {
         await setupMasterPassword(password);
+        await requestPersistentStorage();
+        await autoBackup({ download: false });
         showAppScreen();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -762,6 +870,8 @@ async function handleLogin() {
 
     try {
         await unlockMasterPassword(password);
+        await requestPersistentStorage();
+        await autoBackup({ download: false });
         showAppScreen();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -792,6 +902,9 @@ async function handleRecordSubmit(event) {
         document.getElementById('record-form').reset();
         currentEditingId = null;
         loadAndDisplayRecords(document.getElementById('search-input').value);
+
+        // Auto-backup after every change (download if preference enabled)
+        await autoBackup({ download: isAutoDownloadEnabled() });
     } catch (error) {
         alert('Error saving record: ' + error.message);
     }
@@ -805,9 +918,22 @@ async function handleDelete() {
         document.getElementById('delete-modal').style.display = 'none';
         currentEditingId = null;
         loadAndDisplayRecords(document.getElementById('search-input').value);
+        await autoBackup({ download: isAutoDownloadEnabled() });
     } catch (error) {
         alert('Error deleting record: ' + error.message);
     }
+}
+
+function openEmergencyRestore() {
+    const backup = getEmergencyBackup();
+    if (!backup) {
+        alert('沒有找到本機自動備份');
+        return;
+    }
+    pendingBackup = backup;
+    document.getElementById('restore-password').value = '';
+    document.getElementById('restore-error').textContent = '';
+    document.getElementById('restore-modal').style.display = 'flex';
 }
 
 // ============================================================================
@@ -840,9 +966,22 @@ async function init() {
             }
         }
 
+        updateEmergencyRestoreUI();
+        updateBackupStatusUI();
+
+        const autoDownloadToggle = document.getElementById('auto-download-toggle');
+        if (autoDownloadToggle) {
+            autoDownloadToggle.checked = isAutoDownloadEnabled();
+            autoDownloadToggle.addEventListener('change', () => {
+                setAutoDownloadEnabled(autoDownloadToggle.checked);
+            });
+        }
+
         on('setup-btn', 'click', handleSetup);
         on('login-btn', 'click', handleLogin);
-        on('logout-btn', 'click', logout);
+        on('logout-btn', 'click', () => { logout(); });
+        on('restore-emergency-setup', 'click', openEmergencyRestore);
+        on('restore-emergency-login', 'click', openEmergencyRestore);
         on('add-btn', 'click', () => {
             currentEditingId = null;
             document.getElementById('record-id').value = '';
@@ -917,8 +1056,11 @@ async function init() {
                 pendingBackup = null;
                 document.getElementById('restore-modal').style.display = 'none';
                 document.getElementById('restore-password').value = '';
+                await requestPersistentStorage();
+                await autoBackup({ download: false });
                 alert('備份還原成功！');
                 showAppScreen();
+                updateEmergencyRestoreUI();
             } catch (error) {
                 errorEl.textContent = error.message;
             }
